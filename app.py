@@ -28,14 +28,13 @@ st.markdown('<h1>File GPT 🤖<small> by <a href="https://codegpt.co">Code GPT</
 index = None
 doc = None
 with st.sidebar:
-    user_secret = st.text_input(
+    if user_secret := st.text_input(
         "OpenAI API Key",
         type="password",
         placeholder="Paste your OpenAI API key here (sk-...)",
         help="You can get your API key from https://platform.openai.com/account/api-keys.",
         value=st.session_state.get("OPENAI_API_KEY", ""),
-    )
-    if user_secret:
+    ):
         set_openai_api_key(user_secret)
 
     uploaded_file = st.file_uploader(
@@ -95,8 +94,7 @@ with tab2:
     def get_text():
         if user_secret:
             st.header("Ask me something about the document:")
-            input_text = st.text_area("You:", on_change=clear_submit)
-            return input_text
+            return st.text_area("You:", on_change=clear_submit)
     user_input = get_text()
 
     button = st.button("Submit")

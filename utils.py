@@ -58,21 +58,12 @@ def parse_csv(uploaded_file):
 
     # To convert to a string based IO:
     stringio = StringIO(uploaded_file.getvalue().decode("utf-8"))
-    #st.write(stringio)
-
-    # To read file as string:
-    string_data = stringio.read()
-    #st.write(string_data)
-
-    # Can be used wherever a "file-like" object is accepted:
-    # dataframe = pd.read_csv(uploaded_file)
-    return string_data
+    return stringio.read()
 
 @st.experimental_memo()
 def parse_any(uploaded_file):
     stringio = StringIO(uploaded_file.getvalue().decode("utf-8"))
-    string_data = stringio.read()
-    return string_data
+    return stringio.read()
 
 
 @st.cache(allow_output_mutation=True)
@@ -116,21 +107,16 @@ def embed_docs(docs: List[Document]) -> VectorStore:
         raise AuthenticationError(
             "Enter your OpenAI API key in the sidebar. You can get a key at https://platform.openai.com/account/api-keys."
         )
-    else:
-        # Embed the chunks
-        embeddings = OpenAIEmbeddings(openai_api_key=st.session_state.get("OPENAI_API_KEY"))  # type: ignore
-        index = FAISS.from_documents(docs, embeddings)
-
-        return index
+    # Embed the chunks
+    embeddings = OpenAIEmbeddings(openai_api_key=st.session_state.get("OPENAI_API_KEY"))  # type: ignore
+    return FAISS.from_documents(docs, embeddings)
 
 
 @st.cache(allow_output_mutation=True)
 def search_docs(index: VectorStore, query: str) -> List[Document]:
     """Searches a FAISS index for similar chunks to the query
     and returns a list of Documents."""
-    # Search for similar chunks
-    docs = index.similarity_search(query, k=5)
-    return docs
+    return index.similarity_search(query, k=5)
 
 
 @st.cache(allow_output_mutation=True)
@@ -141,12 +127,9 @@ def get_answer(docs: List[Document], query: str) -> Dict[str, Any]:
 
     chain = load_qa_with_sources_chain(OpenAI(temperature=0, openai_api_key=st.session_state.get("OPENAI_API_KEY")), chain_type="stuff", prompt=STUFF_PROMPT)  # type: ignore
 
-    # Cohere doesn't work very well as of now.
-    # chain = load_qa_with_sources_chain(Cohere(temperature=0), chain_type="stuff", prompt=STUFF_PROMPT)  # type: ignore
-    answer = chain(
+    return chain(
         {"input_documents": docs, "question": query}, return_only_outputs=True
     )
-    return answer
 
 
 @st.cache(allow_output_mutation=True)
@@ -154,14 +137,9 @@ def get_sources(answer: Dict[str, Any], docs: List[Document]) -> List[Document]:
     """Gets the source documents for an answer."""
 
     # Get sources for the answer
-    source_keys = [s for s in answer["output_text"].split("SOURCES: ")[-1].split(", ")]
+    source_keys = list(answer["output_text"].split("SOURCES: ")[-1].split(", "))
 
-    source_docs = []
-    for doc in docs:
-        if doc.metadata["source"] in source_keys:
-            source_docs.append(doc)
-
-    return source_docs
+    return [doc for doc in docs if doc.metadata["source"] in source_keys]
 
 
 def wrap_text_in_html(text: str | List[str]) -> str:
